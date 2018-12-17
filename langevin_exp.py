@@ -30,9 +30,10 @@ def structured_label_flip(y,p=None):
         p = np.ones((nclass,nclass))/float(nclass) # default: uniform random flip
     noisy_y = np.array([np.random.choice(all_val,p=p[c]) for c in y])
     frac_correct = ((noisy_y==y).sum()/float(y.size)) # fraction of labels correct
-    row_ent = -(p*np.log(p+1e-8)).sum(axis=1) # entropy of each row
-    avg_ent = np.mean(row_ent) # average entropy of transition at each node
-    return noisy_y,frac_correct,avg_ent
+    #row_ent = -(p*np.log(p+1e-8)).sum(axis=1) # entropy of each row
+    #avg_ent = np.mean(row_ent) # average entropy of transition at each node
+    noise_level = 0 # TODO
+    return noisy_y,frac_correct,noise_level
 
 def noise_vs_val_acc(model,x,y,vx,vy):
     with tf.Session() as sess:
@@ -132,21 +133,26 @@ def one_vs_all_exp(model,x,y,vx,vy):
         conv = Conv(model=model)
         classlist = list(set(y))
         nclass = len(classlist)
-        sc = 4
+        sc_list = [0,1,2,3,4]
         # single out a class in train and val sets: make labels in {0,1}
+        gc_list = list(set(classlist)-set(sc_list))
         gy = y.copy()
-        gy[y==sc] = 0
-        gy[y!=sc] = 1
+        for sc in sc_list:
+            gy[y==sc] = 0
+        for gc in gc_list:
+            gy[y==gc] = 1
         gvy = vy.copy()
-        gvy[vy==sc] = 0
-        gvy[vy!=sc] = 1
+        for sc in sc_list:
+            gvy[vy==sc] = 0
+        for gc in gc_list:
+            gvy[vy==gc] = 1
         
         for update,use_dropout in [('adam',False),('langevin',False),('adam',True)]:
             title = str(update)
             if use_dropout:
                 title += '+dropout'
             print('\n\nTraining with optimizer update: '+title)
-            for p in [0, 0.2, 0.5, 0.8, 0.9, 0.95, 1.0]:
+            for p in [0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0]:
                 print('\n\nTraining with label noise p =',p,'\n')
                 # generate noise transition matrix
                 noisy_y,frac_correct = random_label_flip(gy,p=p)

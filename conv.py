@@ -6,7 +6,14 @@ import tensorflow as tf
 
 class Conv():
     def __init__(self,model='mnist'):
-        if model == 'mnist':
+        if model in 'mnist':
+            self.niter = 4000
+            self.print_iter = 200
+            self.bz = 100
+            self.lr = 5e-4
+            self.beta1 = 0.5
+            self.eps_t = 1e-2
+        if model in 'mnist_binary':
             self.niter = 4000
             self.print_iter = 200
             self.bz = 100
@@ -97,7 +104,7 @@ class Conv():
         self.lang_op = self.opt.apply_gradients(list(zip(grads,varlist)))
 
     def train(self,sess,x,y,vx,vy,update='adam',use_dropout=True):
-        val_t = []
+        val_t = [(0,0)]
         for itr in range(self.niter):
             bi = np.random.randint(0,x.shape[0],self.bz)
             bx,by = x[bi],y[bi]
@@ -111,7 +118,7 @@ class Conv():
             if itr%self.print_iter == 0:
                 py = sess.run(self.pred,feed_dict={self.x:vx,self.trn_ph:False})
                 vacc = np.mean(py==vy)
-                val_t.append((itr,vacc))
+                val_t.append((itr+1,vacc))
                 print('\tIteration:',itr,'\t',vacc)
         print('Final val:',val_t[-1][1])
         return val_t
