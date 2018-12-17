@@ -133,7 +133,7 @@ def one_vs_all_exp(model,x,y,vx,vy):
         conv = Conv(model=model)
         classlist = list(set(y))
         nclass = len(classlist)
-        sc_list = [0,1,2,3,4]
+        sc_list = [4] #[0,1,2,3,4]
         # single out a class in train and val sets: make labels in {0,1}
         gc_list = list(set(classlist)-set(sc_list))
         gy = y.copy()
@@ -152,7 +152,7 @@ def one_vs_all_exp(model,x,y,vx,vy):
             if use_dropout:
                 title += '+dropout'
             print('\n\nTraining with optimizer update: '+title)
-            for p in [0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0]:
+            for p in [0, 0.2, 0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0]:
                 print('\n\nTraining with label noise p =',p,'\n')
                 # generate noise transition matrix
                 noisy_y,frac_correct = random_label_flip(gy,p=p)
