@@ -20,14 +20,16 @@ def load(train_count=3000,val_count=1000,one_hot=True):
         flist = os.listdir(n_path)
         random.shuffle(flist)
         for s in flist[:train_count]:
-            img = cv2.imread(os.path.join(n_path,s))
+            img = cv2.imread(os.path.join(n_path,s),0)
             img = np.float32(img)/255.
+            img = img[:,:,np.newaxis]
             ds.append((img,lab))
         for s in flist[train_count:train_count+val_count]:
-            img = cv2.imread(os.path.join(n_path,s))
+            img = cv2.imread(os.path.join(n_path,s),0)
             img = np.float32(img)/255.
+            img = img[:,:,np.newaxis]
             vds.append((img,lab))
-    #random.shuffle(ds)
+    random.shuffle(ds)
     random.shuffle(vds)
     x,y = map(np.array,zip(*ds))
     vx,vy = map(np.array,zip(*vds))
