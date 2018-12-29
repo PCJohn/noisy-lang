@@ -17,13 +17,12 @@ output_dir = './res'
 def random_label_flip(y,p=0.0):
     all_val = set(y)
     rand = np.array([np.random.choice(list(all_val-set([y_]))) for y_ in y])
-    #rand = np.array([np.random.choice(list(all_val)) for y_ in y])
     flips = np.random.random(y.shape)
     noisy_y = y.copy()
     noisy_y[flips<p] = rand[flips<p]
     frac_correct = ((noisy_y==y).sum()/float(y.size))
     return noisy_y,frac_correct
-'''
+
 def structured_label_flip(y,p=None):
     all_val = list(set(y))
     nclass = len(all_val)
@@ -33,19 +32,17 @@ def structured_label_flip(y,p=None):
     noisy_y = np.array([np.random.choice(all_val,p=p[c]) for c in y]) # noise addition
     frac_correct = ((noisy_y==y).sum()/float(y.size)) # fraction of labels correct
     return noisy_y,frac_correct
-'''
 
-def structured_label_flip(y, T):
+'''
+def structured_label_flip(y,T):
     all_val = set(y)
     flips = np.random.random(y.shape)
     noisy_y = y.copy()
     noisy_y = np.array([ np.argmax(T[lbl,:]==1-T[lbl,lbl]) if u < 1-T[lbl,lbl] \
                             else lbl for (lbl, u) in zip(y, flips) ])
-    print('Fraction 2-->7: %f' % (sum(noisy_y==2) / float(sum(y==2)))) # sanity-checks
-    print('Fraction 3-->8: %f' % (sum(noisy_y==3) / float(sum(y==3))))
     frac_correct = ((noisy_y==y).sum()/float(y.size))
     return noisy_y,frac_correct
-
+'''
 
 def noise_vs_val_acc(model,x,y,vx,vy):
     with tf.Session() as sess:
@@ -59,7 +56,6 @@ def noise_vs_val_acc(model,x,y,vx,vy):
                 print('\n\nTraining with label noise p =',p,'\n')
                 noisy_y,frac_correct = random_label_flip(y,p=p)
                 print('Fraction of labels correct:',frac_correct,'\n\n')
-                #### sess.run(tf.global_variables_initializer()) # reset model
                 val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update=update,use_dropout=use_dropout)
                 itr_t,v_t = map(list,zip(*val_t))
                 plt.plot(itr_t,v_t,label='p = '+str(p))
@@ -89,7 +85,6 @@ def structured_noise_exp(model,x,y,vx,vy):
         T[6,5] = label_noise_rate
         T[7,7] = 1 - label_noise_rate
         T[7,1] = label_noise_rate
-        
         """
         # T to simulate uniform random label flip
         T *= (1-label_noise_rate)
@@ -99,27 +94,39 @@ def structured_noise_exp(model,x,y,vx,vy):
     
     with tf.Session() as sess:
         conv = Conv(model=model)
-        for update,use_dropout in [('adam',False),('langevin',False),('adam',True)]:
-            title = str(update)
-            if use_dropout:
-                title += '+dropout'
-            print('\n\nTraining with optimizer update: '+title)
-            for noise_level in [0.2]: #[0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
-                T = gen_noise_mat(label_noise_rate=noise_level)
-                noisy_y,frac_correct = structured_label_flip(y,T)
-                print('Fraction of labels correct:',frac_correct,'\n\n')
-                print('Noise level:',noise_level,'\n\n')
-                print('Noise matrix:\n',T,'\n\n')
-                #### sess.run(tf.global_variables_initializer()) # reset model
-                val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update=update,use_dropout=use_dropout)
-                itr_t,v_t = map(list,zip(*val_t))
-                plt.plot(itr_t,v_t,label='Noise: '+str(noise_level))
-            plt.title('Update: '+title)
+        for noise_level in [0.8]: #[0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+            title = 'Noise level: '+str(noise_level)
+            for update,use_dropout in [('adam',False),('langevin',False),('adam',True)]:
+                label = str(update)
+                if use_dropout:
+                    label += '+dropout'
+                for use_dither in [False,True]:
+                    if use_dither:
+                        label += '+dither'
+                    print('\n\nTraining with optimizer update: '+str(update)+' dither: '+str(use_dither))
+                    
+                    T = gen_noise_mat(label_noise_rate=noise_level)
+                    noisy_y,frac_correct = structured_label_flip(y,p=T)
+                    print('Fraction of labels correct:',frac_correct,'\n\n')
+
+                    print('Noise level:',noise_level,'\n\n')
+                    print('Noise matrix:\n',T,'\n\n')
+                
+                    if use_dither:
+                        D = np.eye(10)+0.5*np.random.random(size=T.shape) # dither matrix
+                        D = D/(D.sum(axis=1)[:,np.newaxis])
+                        print('Dither matrix:\n',D,'\n\n')
+                        noisy_y,frac_correct = structured_label_flip(y,p=D) # apply dither
+                
+                    val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update=update,use_dropout=use_dropout)
+                    itr_t,v_t = map(list,zip(*val_t))
+                    plt.plot(itr_t,v_t,label='Noise: '+str(label))
+            plt.title(title)
             plt.ylabel('Val acc.')
             plt.ylim((0,1))
             plt.xlabel('Iterations')
             lgd = plt.legend(loc='center left', bbox_to_anchor=(1,0.5))
-            plt.savefig(osp.join(output_dir,'structured_noise_vs_val_acc_'+title+'.png'),bbox_extra_artists=(lgd,), bbox_inches='tight')
+            plt.savefig(osp.join(output_dir,'structured_exp_noise-'+str(noise_level)+'.png'),bbox_extra_artists=(lgd,),bbox_inches='tight')
             plt.clf()
             
 
@@ -134,9 +141,6 @@ def best_sgld_var_exp(model,x,y,vx,vy):
                 sig = 10**ep
                 print('\n\np =',p,'sig =',sig,'\n')
                 noisy_y,frac_correct = random_label_flip(y,p=p)
-                
-                ####sess.run(tf.global_variables_initializer()) # reset model
-                ####conv.niter = 4000
                 
                 val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update='langevin',use_dropout=False,
                                     hparams={'eps_t':sig,'niter':4000})
@@ -187,7 +191,6 @@ def one_vs_all_exp(model,x,y,vx,vy):
                 # generate noise transition matrix
                 noisy_y,frac_correct = random_label_flip(gy,p=p)
                 print('Fraction of labels correct:',frac_correct,'\n\n')
-                ####sess.run(tf.global_variables_initializer()) # reset model
                 val_t = conv.train(sess,x,noisy_y,vx,gvy,reset=True,update=update,use_dropout=use_dropout)
                 itr_t,v_t = map(list,zip(*val_t))
                 plt.plot(itr_t,v_t,label='p = '+str(p))
@@ -211,20 +214,17 @@ def sgld_noise_level_vs_val_acc(model,x,y,vx,vy):
             title = str(lr)
             for sgld_noise_level in [5e-1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]:
                 print('\n\nlr =',lr,'SGLD noise =',sgld_noise_level,'\n')
-                ####sess.run(tf.global_variables_initializer()) # reset model
                 val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update='langevin',use_dropout=False,
                                         hparams={'lr':lr,'eps_t':sgld_noise_level})
                 itr_t,v_t = map(list,zip(*val_t))
                 plt.plot(itr_t,v_t,label='sgld noise level: '+str(sgld_noise_level))
             # plot plain adam with this learning rate
             print('\n\nlr =',lr,'Update = Adam\n')
-            ####sess.run(tf.global_variables_initializer()) # reset model
             val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update='adam',use_dropout=False,hparams={'lr':lr})
             itr_t,v_t = map(list,zip(*val_t))
             plt.plot(itr_t,v_t,linestyle='--',label='adam')
             # plot adam+dropout with this learning rate
             print('\n\nlr =',lr,'Update = Adam+Dropout\n')
-            ####sess.run(tf.global_variables_initializer()) # reset model
             val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update='adam',use_dropout=True,hparams={'lr':lr})
             itr_t,v_t = map(list,zip(*val_t))
             plt.plot(itr_t,v_t,linestyle=':',label='adam+dropout')
@@ -242,14 +242,14 @@ if __name__ == '__main__':
     # load mnist
     x,y,vx,vy = np.load('./mnist_3000_500.npy',encoding='latin1')
     
-    model = 'mnist'
-    noise_vs_val_acc(model,x,y,vx,vy)
+    #model = 'mnist'
+    #noise_vs_val_acc(model,x,y,vx,vy)
     
     #model = 'mnist'
     #best_sgld_var_exp(model,x,y,vx,vy)
     
-    #model = 'mnist'
-    #structured_noise_exp(model,x,y,vx,vy)
+    model = 'mnist'
+    structured_noise_exp(model,x,y,vx,vy)
 
     #model = 'mnist_binary'
     #one_vs_all_exp(model,x,y,vx,vy)
