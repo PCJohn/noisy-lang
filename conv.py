@@ -5,6 +5,8 @@ import yaml
 import numpy as np
 import tensorflow as tf
 
+import resnet_model
+
 class Conv():
     def __init__(self,model='mnist'):
         self.model = model
@@ -25,7 +27,7 @@ class Conv():
             lr = 5e-4
             beta1 = 0.5
             eps_t = 1e-2
-        elif self.model == 'cifar':
+        elif self.model == 'cifar10':
             niter = 6000
             print_iter = 500
             bz = 100
@@ -74,27 +76,25 @@ class Conv():
             logits = tf.layers.dense(out,2,kernel_initializer=xinit(),bias_initializer=binit)
             self.pred = tf.argmax(logits,axis=1,name='pred_op')
  
-        elif model == 'cifar':
+        elif model == 'cifar10':
             self.x = tf.placeholder(tf.float32,shape=(None,32,32,3),name='input_ph')
             self.y = tf.placeholder(tf.int32,shape=(None,),name='label_ph')
-            
-            out = tf.layers.conv2d(out,16,3,strides=1,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,16,3,strides=1,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,16,3,strides=2,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,32,3,strides=1,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,32,3,strides=1,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,32,3,strides=2,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,64,3,strides=1,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,64,3,strides=1,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,64,3,strides=2,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,128,3,strides=1,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,128,3,strides=1,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
-            out = tf.layers.conv2d(out,128,3,strides=2,activation=relu,padding='same',kernel_initializer=xinit(),bias_initializer=binit)
+            resnet_size = 56
+            num_blocks = (resnet_size - 2) // 6
+            conv = resnet_model.Model(resnet_size=resnet_size,
+                        bottleneck=False,
+                        num_classes=10,
+                        num_filters=16,
+                        kernel_size=3,
+                        conv_stride=1,
+                        first_pool_size=None,
+                        first_pool_stride=None,
+                        block_sizes=[num_blocks] * 3,
+                        block_strides=[1, 2, 2],
+                        resnet_version=resnet_model.DEFAULT_VERSION,
+                        data_format='channels_last')
         
-            out = tf.reshape(out,[-1,np.prod(out.get_shape().as_list()[1:])])
-            out = tf.layers.dropout(out,rate=0.5,training=self.trn_ph)
-        
-            logits = tf.layers.dense(out,10,kernel_initializer=xinit(),bias_initializer=binit)
+            logits = conv(self.x,self.trn_ph)
             self.pred = tf.argmax(logits,axis=1,name='pred_op')
        
         loss = tf.losses.sparse_softmax_cross_entropy(logits=logits,labels=self.y)

@@ -9,6 +9,7 @@ import tensorflow as tf
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
+np.set_printoptions(precision=2)
 
 from conv import Conv
 
@@ -33,8 +34,8 @@ def structured_label_flip(y,p=None):
     frac_correct = ((noisy_y==y).sum()/float(y.size)) # fraction of labels correct
     return noisy_y,frac_correct
 
-'''
-def structured_label_flip(y,T):
+def pytorch_structured_label_flip(y,p=None):
+    T = p
     all_val = set(y)
     flips = np.random.random(y.shape)
     noisy_y = y.copy()
@@ -42,7 +43,7 @@ def structured_label_flip(y,T):
                             else lbl for (lbl, u) in zip(y, flips) ])
     frac_correct = ((noisy_y==y).sum()/float(y.size))
     return noisy_y,frac_correct
-'''
+
 
 def noise_vs_val_acc(model,x,y,vx,vy):
     with tf.Session() as sess:
@@ -85,6 +86,8 @@ def structured_noise_exp(model,x,y,vx,vy):
         T[6,5] = label_noise_rate
         T[7,7] = 1 - label_noise_rate
         T[7,1] = label_noise_rate
+        
+        
         """
         # T to simulate uniform random label flip
         T *= (1-label_noise_rate)
@@ -100,13 +103,13 @@ def structured_noise_exp(model,x,y,vx,vy):
                 label = str(update)
                 if use_dropout:
                     label += '+dropout'
-                for use_dither in [False,True]:
+                for use_dither in [False,True][::-1]:
                     if use_dither:
                         label += '+dither'
                     print('\n\nTraining with optimizer update: '+str(update)+' dither: '+str(use_dither))
                     
                     T = gen_noise_mat(label_noise_rate=noise_level)
-                    noisy_y,frac_correct = structured_label_flip(y,p=T)
+                    noisy_y,frac_correct = pytorch_structured_label_flip(y,p=T)
                     print('Fraction of labels correct:',frac_correct,'\n\n')
 
                     print('Noise level:',noise_level,'\n\n')
@@ -117,7 +120,8 @@ def structured_noise_exp(model,x,y,vx,vy):
                         D = D/(D.sum(axis=1)[:,np.newaxis])
                         print('Dither matrix:\n',D,'\n\n')
                         noisy_y,frac_correct = structured_label_flip(y,p=D) # apply dither
-                
+                        print('Effective Noise matrix:\n',np.matmul(T,D),'\n\n')
+
                     val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update=update,use_dropout=use_dropout)
                     itr_t,v_t = map(list,zip(*val_t))
                     plt.plot(itr_t,v_t,label='Noise: '+str(label))
@@ -240,20 +244,27 @@ def sgld_noise_level_vs_val_acc(model,x,y,vx,vy):
 
 if __name__ == '__main__':
     # load mnist
-    x,y,vx,vy = np.load('./mnist_3000_500.npy',encoding='latin1')
+    #x,y,vx,vy = np.load('./mnist_3000_500.npy',encoding='latin1')
     
     #model = 'mnist'
     #noise_vs_val_acc(model,x,y,vx,vy)
-    
+
     #model = 'mnist'
     #best_sgld_var_exp(model,x,y,vx,vy)
     
-    model = 'mnist'
-    structured_noise_exp(model,x,y,vx,vy)
+    #model = 'mnist'
+    #structured_noise_exp(model,x,y,vx,vy)
 
     #model = 'mnist_binary'
     #one_vs_all_exp(model,x,y,vx,vy)
 
     #model = 'mnist'
     #sgld_noise_level_vs_val_acc(model,x,y,vx,vy)
+
+    x,y,vx,vy = np.load('./cifar_0.7.npy',encoding='latin1')
+    vx = vx[:50]
+    vy = vy[:50]
+    model = 'cifar10'
+    noise_vs_val_acc(model,x,y,vx,vy)
+
 
