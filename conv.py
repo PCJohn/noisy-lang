@@ -20,6 +20,8 @@ class Conv():
             bz = 256
             beta1 = 0.5
             eps_t = 1e-2
+            weight_decay = 0
+            opt = 'adam'
         elif self.model == 'mnist_binary':
             niter = 4000
             print_iter = 200
@@ -27,14 +29,18 @@ class Conv():
             lr = 5e-4
             beta1 = 0.5
             eps_t = 1e-2
+            weight_decay = 0
+            opt = 'adam'
         elif self.model == 'cifar10':
-            niter = 6000
-            print_iter = 500
-            bz = 100
-            lr = 1e-3
-            beta1 = 0.5
+            niter = 20000
+            print_iter = 200
+            bz = 128
+            lr = [(0.01,400),(0.1,32000),(0.01,48000),(0.001,60000)]
+            beta1 = 0.9
             eps_t = 1e-2
-        return {'niter':niter,'print_iter':print_iter,'lr':lr,'bz':bz,'beta1':beta1,'eps_t':eps_t}
+            weight_decay = 0.0001
+            opt = 'momentum'
+        return {'niter':niter,'print_iter':print_iter,'lr':lr,'bz':bz,'beta1':beta1,'eps_t':eps_t,'opt':opt,'weight_decay':weight_decay}
 
     def build_graph(self,model='mnist'):
         xinit = tf.contrib.layers.xavier_initializer
@@ -47,6 +53,7 @@ class Conv():
         self.beta1 = tf.placeholder(tf.float32,name='beta1')
         self.eps_t = tf.placeholder(tf.float32,name='eps_t')
         self.trn_ph = tf.placeholder(tf.bool,name='train_ph')
+        self.weight_decay = tf.placeholder(tf.float32,name='weight_decay')
 
         if model == 'mnist':
             self.x = tf.placeholder(tf.float32,shape=(None,28,28,1),name='input_ph')
@@ -79,7 +86,7 @@ class Conv():
         elif model == 'cifar10':
             self.x = tf.placeholder(tf.float32,shape=(None,32,32,3),name='input_ph')
             self.y = tf.placeholder(tf.int32,shape=(None,),name='label_ph')
-            resnet_size = 56
+            resnet_size = 18
             num_blocks = (resnet_size - 2) // 6
             conv = resnet_model.Model(resnet_size=resnet_size,
                         bottleneck=False,
@@ -99,9 +106,21 @@ class Conv():
        
         loss = tf.losses.sparse_softmax_cross_entropy(logits=logits,labels=self.y)
 
-        # adam opt update
-        self.opt = tf.train.AdamOptimizer(learning_rate=self.lr,beta1=tf.reshape(self.beta1,[]))
-        self.adam_op = self.opt.minimize(loss)
+        # Add weight decay to the loss.
+        def exclude_batch_norm(name):
+            return 'BatchNorm' not in name
+        loss_filter_fn = exclude_batch_norm
+        l2_loss = self.weight_decay * tf.add_n(
+                    [tf.nn.l2_loss(tf.cast(v, tf.float32)) for v in tf.trainable_variables() if loss_filter_fn(v.name)])
+        loss += l2_loss
+
+        # optimizer update
+        opt = self.default_hparams()['opt']
+        if opt.lower() == 'adam':
+            self.opt = tf.train.AdamOptimizer(learning_rate=self.lr,beta1=tf.reshape(self.beta1,[]))
+        elif opt.lower() == 'momentum':
+            self.opt = tf.train.MomentumOptimizer(learning_rate=self.lr,momentum=tf.reshape(self.beta1,[]))
+        self.opt_op = self.opt.minimize(loss)
 
         # langevin updates
         grads,varlist = list(zip(*self.opt.compute_gradients(loss)))
@@ -119,19 +138,33 @@ class Conv():
         eps_t = hparams['eps_t']
         print_iter = hparams['print_iter']
         beta1 = hparams['beta1']
+        opt = hparams['opt']
+        weight_decay = hparams['weight_decay']
+        
         # reset if needed
         if reset:
             sess.run(tf.global_variables_initializer(),feed_dict={self.beta1:beta1})
         
+        if not isinstance(lr,list):
+            lr = [(lr,niter)]
+        lr_index = 0
+
         val_t = [(0,0)]
         for itr in range(niter):
             bi = np.random.randint(0,x.shape[0],bz)
             bx,by = x[bi],y[bi]
             
+            current_lr,next_drop = lr[lr_index]
+            if itr >= next_drop:
+                print('\tUpdating learning rate to',lr[lr_index+1][0],'at iteration',lr[lr_index][1])
+                lr_index += 1
+
             if update == 'adam':
-                sess.run(self.adam_op,feed_dict={self.x:bx,self.y:by,self.trn_ph:use_dropout,self.lr:lr,self.beta1:beta1})
+                sess.run(self.opt_op,
+                feed_dict={self.x:bx,self.y:by,self.trn_ph:use_dropout,self.lr:current_lr,self.beta1:beta1,self.weight_decay:weight_decay})
             elif update == 'langevin':
-                sess.run(self.lang_op,feed_dict={self.x:bx,self.y:by,self.trn_ph:use_dropout,self.lr:lr,self.beta1:beta1,self.eps_t:eps_t})
+                sess.run(self.lang_op,
+                feed_dict={self.x:bx,self.y:by,self.trn_ph:use_dropout,self.lr:current_lr,self.beta1:beta1,self.eps_t:eps_t,self.weight_decay:weight_decay})
             
             if itr%print_iter == 0:
                 py = sess.run(self.pred,feed_dict={self.x:vx,self.trn_ph:False})
