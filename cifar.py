@@ -33,26 +33,26 @@ def load(split=0.7, one_hot=True):
     random.shuffle(ds)
     split = int(len(ds)*split)
     train = ds[:split]
-    val = ds[split:]
+    #val = ds[split:]
 
     x,y = zip(*train)
-    vx,vy = zip(*val)
     tx,ty = zip(*test)
+    #vx,vy = zip(*val)
 
     x = np.array(map(preproc,x))
-    vx = np.array(map(preproc,vx))
     tx = np.array(map(preproc,tx))
+    #vx = np.array(map(preproc,vx))
     if one_hot == True:
         y = map(label,y)
-        vy = map(label,vy)
         ty = map(label,ty)
+        #vy = map(label,vy)
     y = np.array(y)
-    vy = np.array(vy)
     ty = np.array(ty)
+    #vy = np.array(vy)
 
     print 'Cifar loaded'
     print 'Train shape:',x.shape,'--',y.shape
-    print 'Validation shape:',vx.shape,'--',vy.shape
+    #print 'Validation shape:',vx.shape,'--',vy.shape
     print 'Test shape:',tx.shape,'--',ty.shape
 
     for i in range(30):
@@ -60,10 +60,10 @@ def load(split=0.7, one_hot=True):
         plt.title(str(y[i]))
         plt.imshow(s)
         plt.show()
-    return (x,y,vx,vy)
+    return (x,y,tx,ty)
 
 if __name__ == '__main__':
-    tsplit = 0.7
+    tsplit = 1.0
     x,y,vx,vy = load(split=tsplit,one_hot=False)
     np.save('./cifar_'+str(tsplit),[x,y,vx,vy])
 

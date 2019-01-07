@@ -261,10 +261,8 @@ if __name__ == '__main__':
     #model = 'mnist'
     #sgld_noise_level_vs_val_acc(model,x,y,vx,vy)
 
-    x,y,vx,vy = np.load('./cifar_0.7.npy',encoding='latin1')
-    vx = vx[:1000]
-    vy = vy[:1000]
+    x,y,tx,ty = np.load('./cifar_1.0.npy',encoding='latin1')
     model = 'cifar10'
-    noise_vs_val_acc(model,x,y,vx,vy)
+    noise_vs_val_acc(model,x,y,tx,ty)
 
 
