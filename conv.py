@@ -32,13 +32,13 @@ class Conv():
             weight_decay = 0
             opt = 'adam'
         elif self.model == 'cifar10':
-            niter = 20000
-            print_iter = 200
+            niter = 60000
+            print_iter = 500
             bz = 128
-            lr = [(0.01,400),(0.1,32000),(0.01,48000),(0.001,60000)]
+            lr = [(1,400),(0.1,32000),(0.01,48000),(0.001,60000)]
             beta1 = 0.9
             eps_t = 1e-2
-            weight_decay = 0.0001
+            weight_decay = 0.0002
             opt = 'momentum'
         return {'niter':niter,'print_iter':print_iter,'lr':lr,'bz':bz,'beta1':beta1,'eps_t':eps_t,'opt':opt,'weight_decay':weight_decay}
 
@@ -86,7 +86,7 @@ class Conv():
         elif model == 'cifar10':
             self.x = tf.placeholder(tf.float32,shape=(None,32,32,3),name='input_ph')
             self.y = tf.placeholder(tf.int32,shape=(None,),name='label_ph')
-            resnet_size = 18
+            resnet_size = 56
             num_blocks = (resnet_size - 2) // 6
             conv = resnet_model.Model(resnet_size=resnet_size,
                         bottleneck=False,

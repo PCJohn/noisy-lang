@@ -103,7 +103,7 @@ def structured_noise_exp(model,x,y,vx,vy):
                 label = str(update)
                 if use_dropout:
                     label += '+dropout'
-                for use_dither in [False,True][::-1]:
+                for use_dither in [False,True]:
                     if use_dither:
                         label += '+dither'
                     print('\n\nTraining with optimizer update: '+str(update)+' dither: '+str(use_dither))
@@ -264,5 +264,5 @@ if __name__ == '__main__':
     x,y,tx,ty = np.load('./cifar_1.0.npy',encoding='latin1')
     model = 'cifar10'
     noise_vs_val_acc(model,x,y,tx,ty)
-
+    #structured_noise_exp(model,x,y,tx,ty)
 
