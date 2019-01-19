@@ -32,12 +32,12 @@ class Conv():
             weight_decay = 0
             opt = 'adam'
         elif self.model == 'cifar10':
-            niter = 60000
+            niter = 30000
             print_iter = 500
             bz = 128
-            lr = [(1,400),(0.1,32000),(0.01,48000),(0.001,60000)]
+            lr = [(0.01,20000),(0.001,30000)]
             beta1 = 0.9
-            eps_t = 1e-2
+            eps_t = [(0.01,20000),(0.001,30000)]
             weight_decay = 0.0002
             opt = 'momentum'
         return {'niter':niter,'print_iter':print_iter,'lr':lr,'bz':bz,'beta1':beta1,'eps_t':eps_t,'opt':opt,'weight_decay':weight_decay}
@@ -86,7 +86,7 @@ class Conv():
         elif model == 'cifar10':
             self.x = tf.placeholder(tf.float32,shape=(None,32,32,3),name='input_ph')
             self.y = tf.placeholder(tf.int32,shape=(None,),name='label_ph')
-            resnet_size = 56
+            resnet_size = 20
             num_blocks = (resnet_size - 2) // 6
             conv = resnet_model.Model(resnet_size=resnet_size,
                         bottleneck=False,
@@ -149,6 +149,10 @@ class Conv():
             lr = [(lr,niter)]
         lr_index = 0
 
+        if not isinstance(eps_t,list):
+            eps_t = [(eps_t,niter)]
+        eps_t_index = 0
+
         val_t = [(0,0)]
         for itr in range(niter):
             bi = np.random.randint(0,x.shape[0],bz)
@@ -158,6 +162,11 @@ class Conv():
             if itr >= next_drop:
                 print('\tUpdating learning rate to',lr[lr_index+1][0],'at iteration',lr[lr_index][1])
                 lr_index += 1
+
+            current_eps_t,next_eps_t_drop = eps_t[eps_t_index]
+            if itr >= next_eps_t_drop:
+                print('\tUpdating gradient noise to',eps_t[eps_t_index+1][0],'at iteration',eps_t[eps_t_index][1])
+                eps_t_index += 1
 
             if update == 'adam':
                 sess.run(self.opt_op,

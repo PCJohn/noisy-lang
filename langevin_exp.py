@@ -53,7 +53,7 @@ def noise_vs_val_acc(model,x,y,vx,vy):
             if use_dropout:
                 title += '+dropout'
             print('\n\nTraining with optimizer update: '+title)
-            for p in [0, 0.5, 0.8, 0.9, 0.95, 1.0]:
+            for p in [0, 0.3, 0.5, 0.8, 0.9, 1.0]:
                 print('\n\nTraining with label noise p =',p,'\n')
                 noisy_y,frac_correct = random_label_flip(y,p=p)
                 print('Fraction of labels correct:',frac_correct,'\n\n')
@@ -97,13 +97,13 @@ def structured_noise_exp(model,x,y,vx,vy):
     
     with tf.Session() as sess:
         conv = Conv(model=model)
-        for noise_level in [0.8]: #[0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+        for noise_level in [0.7]:
             title = 'Noise level: '+str(noise_level)
-            for update,use_dropout in [('adam',False),('langevin',False),('adam',True)]:
-                label = str(update)
-                if use_dropout:
-                    label += '+dropout'
-                for use_dither in [False,True]:
+            for update,use_dropout in [('adam',False),('langevin',False)]: #,('adam',True)]:
+                for use_dither in [False,True][::-1]:
+                    label = str(update)
+                    if use_dropout:
+                        label += '+dropout'
                     if use_dither:
                         label += '+dither'
                     print('\n\nTraining with optimizer update: '+str(update)+' dither: '+str(use_dither))
@@ -116,7 +116,7 @@ def structured_noise_exp(model,x,y,vx,vy):
                     print('Noise matrix:\n',T,'\n\n')
                 
                     if use_dither:
-                        D = np.eye(10)+0.5*np.random.random(size=T.shape) # dither matrix
+                        D = np.eye(10)+0.05*np.random.random(size=T.shape) # dither matrix
                         D = D/(D.sum(axis=1)[:,np.newaxis])
                         print('Dither matrix:\n',D,'\n\n')
                         noisy_y,frac_correct = structured_label_flip(y,p=D) # apply dither
@@ -244,7 +244,7 @@ def sgld_noise_level_vs_val_acc(model,x,y,vx,vy):
 
 if __name__ == '__main__':
     # load mnist
-    #x,y,vx,vy = np.load('./mnist_3000_500.npy',encoding='latin1')
+    x,y,vx,vy = np.load('./mnist_3000_500.npy',encoding='latin1')
     
     #model = 'mnist'
     #noise_vs_val_acc(model,x,y,vx,vy)
@@ -261,8 +261,9 @@ if __name__ == '__main__':
     #model = 'mnist'
     #sgld_noise_level_vs_val_acc(model,x,y,vx,vy)
 
+    
     x,y,tx,ty = np.load('./cifar_1.0.npy',encoding='latin1')
     model = 'cifar10'
     noise_vs_val_acc(model,x,y,tx,ty)
     #structured_noise_exp(model,x,y,tx,ty)
-
+    
