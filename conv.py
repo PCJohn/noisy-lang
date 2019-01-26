@@ -37,7 +37,7 @@ class Conv():
             bz = 128
             lr = [(0.01,20000),(0.001,30000)]
             beta1 = 0.9
-            eps_t = [(0.01,20000),(0.001,30000)]
+            eps_t = [(0.01,20000),(0.1,30000)]
             weight_decay = 0.0002
             opt = 'momentum'
         return {'niter':niter,'print_iter':print_iter,'lr':lr,'bz':bz,'beta1':beta1,'eps_t':eps_t,'opt':opt,'weight_decay':weight_decay}
@@ -173,7 +173,7 @@ class Conv():
                 feed_dict={self.x:bx,self.y:by,self.trn_ph:use_dropout,self.lr:current_lr,self.beta1:beta1,self.weight_decay:weight_decay})
             elif update == 'langevin':
                 sess.run(self.lang_op,
-                feed_dict={self.x:bx,self.y:by,self.trn_ph:use_dropout,self.lr:current_lr,self.beta1:beta1,self.eps_t:eps_t,self.weight_decay:weight_decay})
+                feed_dict={self.x:bx,self.y:by,self.trn_ph:use_dropout,self.lr:current_lr,self.beta1:beta1,self.eps_t:current_eps_t,self.weight_decay:weight_decay})
             
             if itr%print_iter == 0:
                 py = sess.run(self.pred,feed_dict={self.x:vx,self.trn_ph:False})

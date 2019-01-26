@@ -97,10 +97,12 @@ def structured_noise_exp(model,x,y,vx,vy):
     
     with tf.Session() as sess:
         conv = Conv(model=model)
-        for noise_level in [0.7]:
-            title = 'Noise level: '+str(noise_level)
+        noise_levels = [0.7,0.8]
+        noise_levels_label = ','.join(list(map(str,noise_levels)))
+        title = 'Noise level(s): '+noise_levels_labels
+        for noise_level in noise_levels:
             for update,use_dropout in [('adam',False),('langevin',False)]: #,('adam',True)]:
-                for use_dither in [False,True][::-1]:
+                for use_dither in [False,True][:1]:
                     label = str(update)
                     if use_dropout:
                         label += '+dropout'
@@ -125,13 +127,13 @@ def structured_noise_exp(model,x,y,vx,vy):
                     val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update=update,use_dropout=use_dropout)
                     itr_t,v_t = map(list,zip(*val_t))
                     plt.plot(itr_t,v_t,label='Noise: '+str(label))
-            plt.title(title)
-            plt.ylabel('Val acc.')
-            plt.ylim((0,1))
-            plt.xlabel('Iterations')
-            lgd = plt.legend(loc='center left', bbox_to_anchor=(1,0.5))
-            plt.savefig(osp.join(output_dir,'structured_exp_noise-'+str(noise_level)+'.png'),bbox_extra_artists=(lgd,),bbox_inches='tight')
-            plt.clf()
+        plt.title(title)
+        plt.ylabel('Val acc.')
+        plt.ylim((0,1))
+        plt.xlabel('Iterations')
+        lgd = plt.legend(loc='center left', bbox_to_anchor=(1,0.5))
+        plt.savefig(osp.join(output_dir,'structured_exp_noise-'+noise_levels_label+'.png'),bbox_extra_artists=(lgd,),bbox_inches='tight')
+        plt.clf()
             
 
 def best_sgld_var_exp(model,x,y,vx,vy):
