@@ -120,7 +120,7 @@ class Conv():
             num_blocks = (resnet_size - 2) // 6
             conv = resnet_model.Model(resnet_size=resnet_size,
                         bottleneck=False,
-                        num_classes=10,
+                        num_classes=100,
                         num_filters=16,
                         kernel_size=3,
                         conv_stride=1,

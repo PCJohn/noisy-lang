@@ -264,8 +264,13 @@ if __name__ == '__main__':
     #sgld_noise_level_vs_val_acc(model,x,y,vx,vy)
 
     
-    x,y,tx,ty = np.load('./cifar_1.0.npy',encoding='latin1')
+    '''x,y,tx,ty = np.load('./cifar_1.0.npy',encoding='latin1')
     model = 'cifar10'
     noise_vs_val_acc(model,x,y,tx,ty)
     #structured_noise_exp(model,x,y,tx,ty)
-    
+    '''
+
+    x,y,tx,ty = np.load('./cifar100_1.0.npy',encoding='latin1')
+    model = 'cifar100'
+    noise_vs_val_acc(model,x,y,tx,ty)
+    #structured_noise_exp(model,x,y,tx,ty
