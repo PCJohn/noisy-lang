@@ -40,6 +40,15 @@ class Conv():
             eps_t = [(0.01,20000),(0.1,30000)]
             weight_decay = 0.0002
             opt = 'momentum'
+        elif self.model == 'cifar100':
+            niter = 30000
+            print_iter = 500
+            bz = 128
+            lr = [(0.01,20000),(0.001,30000)]
+            beta1 = 0.9
+            eps_t = [(0.01,20000),(0.1,30000)]
+            weight_decay = 0.0002
+            opt = 'momentum'
         return {'niter':niter,'print_iter':print_iter,'lr':lr,'bz':bz,'beta1':beta1,'eps_t':eps_t,'opt':opt,'weight_decay':weight_decay}
 
     def build_graph(self,model='mnist'):
@@ -103,6 +112,28 @@ class Conv():
         
             logits = conv(self.x,self.trn_ph)
             self.pred = tf.argmax(logits,axis=1,name='pred_op')
+        
+        elif model == 'cifar100':
+            self.x = tf.placeholder(tf.float32,shape=(None,32,32,3),name='input_ph')
+            self.y = tf.placeholder(tf.int32,shape=(None,),name='label_ph')
+            resnet_size = 20
+            num_blocks = (resnet_size - 2) // 6
+            conv = resnet_model.Model(resnet_size=resnet_size,
+                        bottleneck=False,
+                        num_classes=10,
+                        num_filters=16,
+                        kernel_size=3,
+                        conv_stride=1,
+                        first_pool_size=None,
+                        first_pool_stride=None,
+                        block_sizes=[num_blocks] * 3,
+                        block_strides=[1, 2, 2],
+                        resnet_version=resnet_model.DEFAULT_VERSION,
+                        data_format='channels_last')
+            
+            logits = conv(self.x,self.trn_ph)
+            self.pred = tf.argmax(logits,axis=1,name='pred_op')
+
        
         loss = tf.losses.sparse_softmax_cross_entropy(logits=logits,labels=self.y)
 

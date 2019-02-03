@@ -99,11 +99,11 @@ def structured_noise_exp(model,x,y,vx,vy):
         conv = Conv(model=model)
         noise_levels = [0.7,0.8]
         noise_levels_label = ','.join(list(map(str,noise_levels)))
-        title = 'Noise level(s): '+noise_levels_labels
+        title = 'Noise level(s): '+noise_levels_label
         for noise_level in noise_levels:
             for update,use_dropout in [('adam',False),('langevin',False)]: #,('adam',True)]:
                 for use_dither in [False,True][:1]:
-                    label = str(update)
+                    label = 'p = '+str(noise_level)+','+str(update)
                     if use_dropout:
                         label += '+dropout'
                     if use_dither:
@@ -126,7 +126,7 @@ def structured_noise_exp(model,x,y,vx,vy):
 
                     val_t = conv.train(sess,x,noisy_y,vx,vy,reset=True,update=update,use_dropout=use_dropout)
                     itr_t,v_t = map(list,zip(*val_t))
-                    plt.plot(itr_t,v_t,label='Noise: '+str(label))
+                    plt.plot(itr_t,v_t,label=str(label))
         plt.title(title)
         plt.ylabel('Val acc.')
         plt.ylim((0,1))
