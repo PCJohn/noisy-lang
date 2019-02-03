@@ -93,9 +93,9 @@ def structured_noise_exp(model,x,y,vx,vy):
         T[T==0] = label_noise_rate/float(nclass-1)
         """
 
-        T = np.eye(NUM_CLS)
+        T = np.eye(100)
         k = 0
-        for i,j in list(zip(np.random.permutation(NUM_CLS),np.random.permutation(NUM_CLS))):
+        for i,j in list(zip(np.random.permutation(100),np.random.permutation(100))):
             if i == j:
                 continue
             T[i,i] = 1 - args.label_noise_rate
