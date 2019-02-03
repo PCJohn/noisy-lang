@@ -74,7 +74,7 @@ def structured_noise_exp(model,x,y,vx,vy):
     
     # manually set T
     def gen_noise_mat(label_noise_rate=0.5):
-        T = np.eye(10)
+        """T = np.eye(10)
         # T from Patrini et al, 2017
         T[2,2] = 1 - label_noise_rate
         T[2,7] = label_noise_rate
@@ -86,13 +86,24 @@ def structured_noise_exp(model,x,y,vx,vy):
         T[6,5] = label_noise_rate
         T[7,7] = 1 - label_noise_rate
         T[7,1] = label_noise_rate
-        
-        
+        """
         """
         # T to simulate uniform random label flip
         T *= (1-label_noise_rate)
         T[T==0] = label_noise_rate/float(nclass-1)
         """
+
+        T = np.eye(NUM_CLS)
+        k = 0
+        for i,j in list(zip(np.random.permutation(NUM_CLS),np.random.permutation(NUM_CLS))):
+            if i == j:
+                continue
+            T[i,i] = 1 - args.label_noise_rate
+            T[i,j] = args.label_noise_rate
+            k += 1
+            if k == args.struct_noise:
+                break
+
         return T
     
     with tf.Session() as sess:
